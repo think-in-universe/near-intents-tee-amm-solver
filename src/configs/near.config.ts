@@ -6,24 +6,24 @@ export const nearNetworkId = (process.env.NEAR_NETWORK_ID as NearChainId) || Nea
 export const nearDefaultConnectionConfigs = {
   [NearChainId.MAINNET]: {
     networkId: NearChainId.MAINNET,
-    nodeUrl: 'https://near.lava.build',
+    nodeUrls: ['https://near.lava.build', 'https://free.rpc.fastnear.com'],
     walletUrl: 'https://wallet.mainnet.near.org',
     helperUrl: 'https://helper.mainnet.near.org',
     keyStore: new keyStores.InMemoryKeyStore(),
-  } as INearConnectionConfig,
+  },
   [NearChainId.TESTNET]: {
     networkId: NearChainId.TESTNET,
-    nodeUrl: 'https://neart.lava.build',
+    nodeUrls: ['https://neart.lava.build', 'https://test.rpc.fastnear.com'],
     walletUrl: 'https://wallet.testnet.near.org',
     helperUrl: 'https://helper.testnet.near.org',
     keyStore: new keyStores.InMemoryKeyStore(),
-  } as INearConnectionConfig,
+  },
 };
 
-export const nearConnectionConfig: INearConnectionConfig = {
+export const nearConnectionConfigs: INearConnectionConfig[] = nearDefaultConnectionConfigs[nearNetworkId].nodeUrls.map((nodeUrl) => ({
   ...nearDefaultConnectionConfigs[nearNetworkId],
-  nodeUrl: process.env.NEAR_NODE_URL || nearDefaultConnectionConfigs[nearNetworkId].nodeUrl,
-};
+  nodeUrl: nodeUrl,
+}));
 
 export const nearAccountConfig: INearAccountConfig = {
   accountId: process.env.NEAR_ACCOUNT_ID!,

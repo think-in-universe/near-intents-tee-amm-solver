@@ -11,6 +11,7 @@ import { generateSeedPhrase } from 'near-seed-phrase';
 import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
 import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
+import { NearService } from 'src/services/near.service';
 
 export interface Worker {
   pool_id: number;
@@ -123,8 +124,8 @@ export async function registerWorker(account: Account, publicKey: string) {
   return resContract;
 }
 
-export async function getWorker(account: Account): Promise<Worker | null> {
-  return account.viewFunction({
+export async function getWorker(nearService: NearService, account: Account): Promise<Worker | null> {
+  return nearService.validatedViewFunction({
     contractId: solverRegistryContract!,
     methodName: 'get_worker',
     args: {
@@ -133,8 +134,8 @@ export async function getWorker(account: Account): Promise<Worker | null> {
   });
 }
 
-export async function getPool(account: Account, poolId: number): Promise<Pool | null> {
-  return account.viewFunction({
+export async function getPool(nearService: NearService, poolId: number): Promise<Pool | null> {
+  return nearService.validatedViewFunction({
     contractId: solverRegistryContract!,
     methodName: 'get_pool',
     args: {
