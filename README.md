@@ -42,7 +42,7 @@ set NODE_ENV=local && npm start
 * `RELAY_WS_URL` — solver relay URL (default: `wss://solver-relay-v2.chaindefuser.com/ws`)
 * `RELAY_AUTH_KEY` — solver's authentication key for accessing the relay (currently unused)
 * `INTENTS_CONTRACT` — ID of the Near Intents contract (default: `intents.near`)
-* `MARGIN_PERCENT` — AMM margin percent, must be positive (default: `0.3`)
+* `MARGIN_PERCENT` — AMM margin percent, must be positive
 
 ## Preparation before the first run
 
@@ -122,5 +122,6 @@ docker run --platform linux/amd64 \
     -e SOLVER_POOL_ID=${SOLVER_POOL_ID} \
     -e AMM_TOKEN1_ID=${AMM_TOKEN1_ID} \
     -e AMM_TOKEN2_ID=${AMM_TOKEN2_ID} \
+    -e MARGIN_PERCENT=${MARGIN_PERCENT} \
     intents-tee-amm-solver:latest
 ```

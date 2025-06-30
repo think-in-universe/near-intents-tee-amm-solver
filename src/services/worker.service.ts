@@ -5,6 +5,7 @@ import { sleep } from 'src/utils/sleep';
 import { LoggerService } from './logger.service';
 import { NEAR } from 'near-units';
 import { solverPoolId } from 'src/configs/intents.config';
+import { marginPercent } from 'src/configs/quoter.config';
 
 export class WorkerService {
   public constructor(private readonly nearService: NearService) {}
@@ -12,15 +13,17 @@ export class WorkerService {
   private logger = new LoggerService('worker');
 
   public async init(): Promise<void> {
-    await this.verifyTokenIds();
+    await this.verifyPoolInfo();
     await this.registerSolverInRegistry();
   }
 
-  private async verifyTokenIds() {
+  private async verifyPoolInfo() {
     const pool = await getPool(this.nearService.getSigner(), Number(solverPoolId!));
     if (!pool) {
       throw new Error('Pool not found');
     }
+
+    // Verify token IDs in pool
     const tokenIds = pool.token_ids;
     if (tokenIds.length !== 2) {
       throw new Error('The pool has invalid number of tokens');
@@ -33,6 +36,13 @@ export class WorkerService {
       throw new Error('Pool has invalid token IDs');
     }
     this.logger.info(`The tokens in the pool: (${tokenIds.join(', ')})`);
+
+    // Verify fee in pool
+    const fee = pool.fee;
+    if (fee !== marginPercent * 100) {
+      throw new Error('Pool has invalid fee');
+    }
+    this.logger.info(`The fee in the pool: ${fee / 100}%`);
   }
 
   private async registerSolverInRegistry() {

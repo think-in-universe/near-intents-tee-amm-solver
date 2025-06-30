@@ -20,5 +20,5 @@ export const envVariablesValidationSchema = Joi.object({
   // TODO: verify the token IDs are the same as pool's info
   AMM_TOKEN1_ID: Joi.string().required(),
   AMM_TOKEN2_ID: Joi.string().required(),
-  MARGIN_PERCENT: Joi.number().positive().default(0.3),
+  MARGIN_PERCENT: Joi.number().positive().required(),
 }).unknown();
