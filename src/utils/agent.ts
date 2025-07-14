@@ -23,6 +23,7 @@ export interface Pool {
   token_ids: string[];
   amounts: string[];
   fee: number;
+  unclaimed_fees: string[];
   shares_total_supply: string;
 }
 
@@ -140,6 +141,16 @@ export async function getPool(nearService: NearService, poolId: number): Promise
     methodName: 'get_pool',
     args: {
       pool_id: poolId,
+    },
+  });
+}
+
+export async function collectPoolFees(account: Account, fees: string[]) {
+  return await account.functionCall({
+    contractId: solverRegistryContract!,
+    methodName: 'collect_pool_fees',
+    args: {
+      fees,
     },
   });
 }

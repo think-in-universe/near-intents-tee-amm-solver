@@ -3,7 +3,7 @@ import bs58 from 'bs58';
 import { IMessage, SignStandardEnum } from '../interfaces/intents.interface';
 import { IQuoteRequestData, IQuoteResponseData } from '../interfaces/websocket.interface';
 import { CacheService } from './cache.service';
-import { intentsContract } from '../configs/intents.config';
+import { intentsContract, solverPoolId } from '../configs/intents.config';
 import { marginPercent, quoteDeadlineExtraMs, quoteDeadlineMaxMs } from '../configs/quoter.config';
 import { tokens } from '../configs/tokens';
 import { NearService } from './near.service';
@@ -11,6 +11,7 @@ import { IntentsService } from './intents.service';
 import { LoggerService } from './logger.service';
 import { serializeIntent } from '../utils/hashing';
 import { makeNonReentrant } from '../utils/make-nonreentrant';
+import { collectPoolFees, getPool } from 'src/utils/agent';
 
 type State = {
   reserves: Record<string, string>;
@@ -29,7 +30,11 @@ export class QuoterService {
   ) {}
 
   public updateCurrentState = makeNonReentrant(async () => {
-    const reserves = await this.intentsService.getBalancesOnContract(tokens);
+    const balances = await this.intentsService.getBalancesOnContract(tokens);
+    // exclude unclaimed fees from reserves
+    const unclaimedFees = await this.getUnclaimedFees();
+    const reserves = tokens.map((_, i) => Big(balances[i]).sub(Big(unclaimedFees[i])).toFixed(0, Big.roundDown));
+
     if (!this.currentState || !reserves.every((reserve, i) => reserve === this.currentState!.reserves[tokens[i]])) {
       this.currentState = {
         reserves: reserves.reduce((m, reserve, i) => ((m[tokens[i]] = reserve), m), {} as Record<string, string>),
@@ -63,7 +68,7 @@ export class QuoterService {
       return;
     }
 
-    const amount = this.calculateQuote(
+    const { amount, fees } = this.calculateQuote(
       params.defuse_asset_identifier_in,
       params.defuse_asset_identifier_out,
       params.exact_amount_in,
@@ -128,6 +133,10 @@ export class QuoterService {
       },
     };
 
+    // collect fees after intent is executed
+    // TODO: test collecting fees actually works as expected
+    this.collectFees(tokens.map((token) => fees[token] || '0'));
+
     this.cacheService.set(bs58.encode(quoteHash), quoteResp, quoteDeadlineMs / 1000);
 
     return quoteResp;
@@ -144,20 +153,42 @@ export class QuoterService {
     logger: LoggerService,
   ) {
     let amountStr = '0';
+    let fees: Record<string, string> = {};
 
     if (amountIn) {
-      amountStr = getAmountOut(new Big(amountIn), new Big(reserveIn), new Big(reserveOut), marginPercent);
+      const { amountOut, fees: feesStr } = getAmountOut(new Big(amountIn), new Big(reserveIn), new Big(reserveOut), marginPercent);
+      amountStr = amountOut;
+      fees = { tokenIn: feesStr, tokenOut: '0' };
       logger.info(
         `Calculated quote result for ${tokenIn} / ${amountIn} -> ${tokenOut} = ${amountStr} with margin ${marginPercent}%`,
       );
     } else if (amountOut) {
-      amountStr = getAmountIn(new Big(amountOut), new Big(reserveIn), new Big(reserveOut), marginPercent);
+      const { amountIn, fees: feesStr } = getAmountIn(new Big(amountOut), new Big(reserveIn), new Big(reserveOut), marginPercent);
+      amountStr = amountIn;
+      fees = { tokenIn: '0', tokenOut: feesStr };
       logger.info(
         `Calculated quote result for ${tokenIn} -> ${tokenOut} / ${amountOut} = ${amountStr} with margin ${marginPercent}%`,
       );
     }
 
-    return amountStr;
+    return {
+      amount: amountStr,
+      fees,
+    };
+  }
+
+  private async getUnclaimedFees() {
+    const pool = await getPool(this.nearService, Number(solverPoolId!));
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+    return pool.unclaimed_fees;
+  }
+
+  private async collectFees(fees: string[]) {
+    const signer = this.nearService.getSigner();
+    await collectPoolFees(signer, fees);
+    this.logger.info(`Collected pool fees: ${fees.join(', ')}`);
   }
 }
 
@@ -168,7 +199,11 @@ export function getAmountOut(amountIn: Big, reserveIn: Big, reserveOut: Big, mar
   const amountInWithFee = amountIn.mul(10000 - marginBips);
   const numerator = amountInWithFee.mul(reserveOut);
   const denominator = reserveIn.mul(10000).add(amountInWithFee);
-  return numerator.div(denominator).toFixed(0, Big.roundDown);
+  const amountOut = numerator.div(denominator).toFixed(0, Big.roundDown);
+  return {
+    amountOut,
+    fees: amountIn.mul(marginBips / 10000).toFixed(0, Big.roundDown),
+  };
 }
 
 export function getAmountIn(amountOut: Big, reserveIn: Big, reserveOut: Big, marginPercent: number) {
@@ -177,5 +212,9 @@ export function getAmountIn(amountOut: Big, reserveIn: Big, reserveOut: Big, mar
   const marginBips = Math.floor(marginPercent * 100);
   const numerator = reserveIn.mul(amountOut).mul(10000);
   const denominator = reserveOut.sub(amountOut).mul(10000 - marginBips);
-  return numerator.div(denominator).toFixed(0, Big.roundUp);
+  const amountIn = numerator.div(denominator).toFixed(0, Big.roundUp);
+  return {
+    amountIn,
+    fees: amountOut.mul(marginBips / 10000).toFixed(0, Big.roundDown),
+  };
 }
