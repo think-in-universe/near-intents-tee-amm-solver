@@ -69,6 +69,12 @@ export async function deriveWorkerAccount(hash?: Buffer | undefined) {
   const { publicKey, secretKey } = generateSeedPhrase(hash);
   const accountId = getImplicit(publicKey);
 
+  console.log('generated accountId', {
+    accountId,
+    publicKey,
+    secretKey,
+  });
+
   return { accountId, publicKey, secretKey };
 }
 
@@ -88,6 +94,7 @@ export async function registerWorker(account: Account, publicKey: string) {
 
   // add public key into the attestation report data
   // get TDX quote
+  console.log('registered publicKey', publicKey);
   const ra = await client.tdxQuote(publicKey, "raw");
   const quote_hex = ra.quote.replace(/^0x/, '');
 

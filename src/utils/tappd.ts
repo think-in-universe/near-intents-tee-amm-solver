@@ -248,6 +248,7 @@ export class TappdClient {
     hash_algorithm?: TdxQuoteHashAlgorithms,
   ): Promise<TdxQuoteResponse> {
     let hex = to_hex(report_data);
+    console.log('report data hex', hex);
     if (hash_algorithm === 'raw') {
       if (hex.length > 128) {
         throw new Error(`Report data is too large, it should less then 64 bytes when hash_algorithm is raw.`);
