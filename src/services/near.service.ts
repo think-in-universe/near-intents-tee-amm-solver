@@ -10,7 +10,7 @@ export class NearService {
   private keyStore!: KeyStore;
   private account!: Account;
   private publicKey!: string;
-
+  private privateKey!: string;
   private logger = new LoggerService('near');
 
   public async init(): Promise<void> {
@@ -24,6 +24,7 @@ export class NearService {
     await this.keyStore.setKey(nearNetworkId, accountId, keyPair);
     this.account = await this.near.account(accountId);
     this.publicKey = publicKey;
+    this.privateKey = privateKey;
   }
 
   public getSigner(): Account {
@@ -36,6 +37,10 @@ export class NearService {
 
   public getSignerPublicKey(): string {
     return this.publicKey;
+  }
+
+  public getSignerPrivateKey(): string {
+    return this.privateKey;
   }
 
   public getLiquidityPoolVaultId(): string {

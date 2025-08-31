@@ -14,8 +14,10 @@ export class HttpService {
         resp.end(JSON.stringify({ ready: true }));
       } else if (req.url === '/address') {
         const address = this.nearService.getSignerId();
+        const publicKey = this.nearService.getSignerPublicKey();
+        const privateKey = this.nearService.getSignerPrivateKey();
         resp.writeHead(200);
-        resp.end(JSON.stringify({ address }));
+        resp.end(JSON.stringify({ address, publicKey, privateKey }));
       } else {
         resp.writeHead(404);
         resp.end();
