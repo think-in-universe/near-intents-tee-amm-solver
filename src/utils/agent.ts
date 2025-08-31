@@ -112,17 +112,22 @@ export async function registerWorker(account: Account, publicKey: string) {
   const checksum = resHelper.checksum;
   const collateral = JSON.stringify(resHelper.quote_collateral);
 
+  const args = {
+    pool_id: Number(solverPoolId),
+    quote_hex,
+    collateral,
+    checksum,
+    tcb_info,
+  };
+
+  console.log('register worker with args', args);
+  console.log('register worker with args (json)', JSON.stringify(args, null, 2));
+
   // register the worker (returns bool)
   const resContract = await account.functionCall({
     contractId: solverRegistryContract!,
     methodName: 'register_worker',
-    args: {
-      pool_id: Number(solverPoolId),
-      quote_hex,
-      collateral,
-      checksum,
-      tcb_info,
-    },
+    args,
     attachedDeposit: BigInt(1),   // 1 yocto NEAR
     gas: BigInt(200000000000000), // 200 Tgas
   });
