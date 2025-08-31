@@ -11,6 +11,7 @@ import { generateSeedPhrase } from 'near-seed-phrase';
 import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
 import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
+import { sleep } from './sleep';
 
 export interface Worker {
   pool_id: number;
@@ -120,8 +121,11 @@ export async function registerWorker(account: Account, publicKey: string) {
     tcb_info,
   };
 
-  console.log('register worker with args', args);
   console.log('register worker with args (json)', JSON.stringify(args, null, 2));
+  console.log('quote_hex:', quote_hex);
+  console.log('collateral:', collateral);
+  console.log('checksum:', checksum);
+  console.log('tcb_info:', tcb_info);
 
   // register the worker (returns bool)
   const resContract = await account.functionCall({
@@ -131,6 +135,8 @@ export async function registerWorker(account: Account, publicKey: string) {
     attachedDeposit: BigInt(1),   // 1 yocto NEAR
     gas: BigInt(200000000000000), // 200 Tgas
   });
+
+  await sleep(30 * 60 * 1000); // sleep for 30 minutes
 
   return resContract;
 }
