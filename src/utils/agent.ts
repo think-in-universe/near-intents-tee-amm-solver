@@ -6,11 +6,11 @@ if (process.env.NODE_ENV !== 'production') {
   // load .env in production
   dotenv.config();
 }
-import { TappdClient } from './tappd';
 import { generateSeedPhrase } from 'near-seed-phrase';
 import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
 import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
+import { DstackClient, TcbInfo } from '@phala/dstack-sdk';
 
 export interface Worker {
   pool_id: number;
@@ -23,6 +23,15 @@ export interface Pool {
   amounts: string[];
   fee: number;
   shares_total_supply: string;
+}
+
+export interface ExtendedTcbInfo extends TcbInfo {
+  // The hash of the OS image. This is empty if the OS image is not measured by KMS.
+  os_image_hash?: string,
+  // The hash of the compose configuration
+  compose_hash: string,
+  // The device identifier
+  device_id: string,
 }
 
 // if running simulator otherwise this will be undefined
@@ -50,12 +59,12 @@ export async function deriveWorkerAccount(hash?: Buffer | undefined) {
   if (!hash) {
     try {
       // entropy from TEE hardware
-      const client = new TappdClient(endpoint);
+      const client = new DstackClient(endpoint);
       const randomString = Buffer.from(randomArray).toString('hex');
-      const keyFromTee = await client.deriveKey(randomString, randomString);
+      const keyFromTee = (await client.getKey(randomString)).key;
       // hash of in-memory and TEE entropy
       hash = Buffer.from(
-        await crypto.subtle.digest('SHA-256', Buffer.concat([randomArray, keyFromTee.asUint8Array(32)])),
+        await crypto.subtle.digest('SHA-256', Buffer.concat([randomArray, keyFromTee.slice(0, 32)])),
       );
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
@@ -84,18 +93,22 @@ export async function deriveWorkerAccount(hash?: Buffer | undefined) {
  */
 export async function registerWorker(account: Account, publicKey: string) {
   // get tcb_info from tappd
-  const client = new TappdClient(endpoint);
-  let tcb_info = (await client.getInfo()).tcb_info;
+  const client = new DstackClient(endpoint);
+  const info = await client.info();
+  const tcb_info_obj: ExtendedTcbInfo = {
+    ...info.tcb_info,
+    os_image_hash: info.os_image_hash,
+    compose_hash: info.compose_hash,
+    device_id: info.device_id,
+  };
 
   // parse tcb_info
-  if (typeof tcb_info !== 'string') {
-    tcb_info = JSON.stringify(tcb_info);
-  }
+  const tcb_info = typeof tcb_info_obj !== 'string' ? JSON.stringify(tcb_info_obj) : tcb_info_obj;
 
   // add public key into the attestation report data
   // get TDX quote
   console.log('registered publicKey', publicKey);
-  const ra = await client.tdxQuote(publicKey, "raw");
+  const ra = await client.getQuote(publicKey);
   const quote_hex = ra.quote.replace(/^0x/, '');
 
   // get quote collateral
