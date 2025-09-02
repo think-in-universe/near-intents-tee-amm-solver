@@ -89,6 +89,47 @@ export async function deriveWorkerAccount(hash?: Buffer | undefined) {
 }
 
 /**
+ * Creates report data for TEE attestation following the same structure as Rust implementation
+ * @param publicKey - The public key string to hash
+ * @returns {Uint8Array} 64-byte report data array
+ */
+function createReportData(publicKey: string): Uint8Array {
+  // Create report data array following the same structure as Rust implementation:
+  // report_data: [u8; 64] = [version(2 bytes big endian) || sha384(TLS pub key) || zero padding]
+  // SHA3-384 produces 384 bits = 48 bytes
+  const REPORT_DATA_SIZE = 64;
+  const BINARY_VERSION_OFFSET = 0;
+  const PUBLIC_KEYS_OFFSET = 2;
+  const BINARY_VERSION = 1; // u16 value
+
+  // Initialize report data array with zeros
+  const reportData = new Uint8Array(REPORT_DATA_SIZE);
+
+  // Copy binary version (2 bytes, big endian)
+  const versionBytes = new Uint8Array(2);
+  new DataView(versionBytes.buffer).setUint16(0, BINARY_VERSION, false); // false = big endian
+  reportData.set(versionBytes, BINARY_VERSION_OFFSET);
+
+  // Hash the public key with SHA3-384 and copy to report data
+  const publicKeyBytes = PublicKey.from(publicKey).data;
+  const publicKeyHash = crypto.createHash('sha3-384').update(publicKeyBytes).digest();
+
+  // Verify hash length is exactly 48 bytes (SHA3-384 produces 384 bits = 48 bytes)
+  console.log('publicKeyBytes length:', publicKeyBytes.length);
+  console.log('publicKeyHash length:', publicKeyHash.length);
+  console.log('Expected hash length: 48 bytes (SHA3-384 = 384 bits)');
+
+  if (publicKeyHash.length !== 48) {
+    throw new Error(`Expected SHA3-384 hash to be 48 bytes, but got ${publicKeyHash.length} bytes`);
+  }
+
+  reportData.set(publicKeyHash, PUBLIC_KEYS_OFFSET);
+
+  // Remaining bytes are already zero (padding)
+  return reportData;
+}
+
+/**
  * Registers a worker with the contract
  * @returns {Promise<boolean>} Result of the registration
  */
@@ -106,12 +147,11 @@ export async function registerWorker(account: Account, publicKey: string) {
   // parse tcb_info
   const tcb_info = typeof tcb_info_obj !== 'string' ? JSON.stringify(tcb_info_obj) : tcb_info_obj;
 
-  // Hash the entire public key bytes with SHA3-384
-  // add public key into the attestation report data
-  const publicKeyBytes = PublicKey.from(publicKey).data;
-  const reportData = crypto.createHash('sha3-384').update(publicKeyBytes).digest();
+  // Create report data for TEE attestation
+  const reportData = createReportData(publicKey);
   console.log('registered publicKey', publicKey);
-  console.log('reportData', reportData.toString('hex'));
+  console.log('reportData (hex)', Buffer.from(reportData).toString('hex'));
+  console.log('reportData length', reportData.length);
 
   // get TDX quote
   const ra = await client.getQuote(reportData);
