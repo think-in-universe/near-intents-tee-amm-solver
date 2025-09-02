@@ -51,9 +51,12 @@ export class WorkerService {
       }
       // register worker with the public key derived from TEE
       const publicKey = this.nearService.getSignerPublicKey();
-      await registerWorker(signer, publicKey);
+      const { info } = await registerWorker(signer, publicKey);
+      this.nearService.setTcbInfo(info);
       this.logger.info(`Worker registered`);
       worker = await getWorker(signer);
+
+      await sleep(30 * 60 * 1000); // sleep for 30 minutes
     }
 
     this.logger.info(`Worker: ${JSON.stringify(worker)}`);

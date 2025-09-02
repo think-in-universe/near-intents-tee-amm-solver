@@ -11,7 +11,6 @@ import { generateSeedPhrase } from 'near-seed-phrase';
 import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
 import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
-import { sleep } from './sleep';
 
 export interface Worker {
   pool_id: number;
@@ -136,9 +135,7 @@ export async function registerWorker(account: Account, publicKey: string) {
     gas: BigInt(200000000000000), // 200 Tgas
   });
 
-  await sleep(30 * 60 * 1000); // sleep for 30 minutes
-
-  return resContract;
+  return { info: tcb_info, contract: resContract };
 }
 
 export async function getWorker(account: Account): Promise<Worker | null> {

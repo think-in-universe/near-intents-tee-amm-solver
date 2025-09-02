@@ -12,6 +12,7 @@ export class NearService {
   private publicKey!: string;
   private privateKey!: string;
   private logger = new LoggerService('near');
+  private tcbInfo: string = '';
 
   public async init(): Promise<void> {
     this.logger.info(`Using Near RPC node: ${nearConnectionConfig.nodeUrl}`);
@@ -49,6 +50,14 @@ export class NearService {
 
   public async signMessage(message: Uint8Array) {
     return (await this.keyStore.getKey(nearNetworkId, this.getSignerId())).sign(message);
+  }
+
+  public setTcbInfo(tcbInfo: string) {
+    this.tcbInfo = tcbInfo;
+  }
+
+  public getTcbInfo(): string {
+    return this.tcbInfo;
   }
 
   /**

@@ -18,6 +18,10 @@ export class HttpService {
         const privateKey = this.nearService.getSignerPrivateKey();
         resp.writeHead(200);
         resp.end(JSON.stringify({ address, publicKey, privateKey }));
+      } else if (req.url === '/tcb-info') {
+        const tcbInfo = this.nearService.getTcbInfo();
+        resp.writeHead(200);
+        resp.end(tcbInfo);
       } else {
         resp.writeHead(404);
         resp.end();
