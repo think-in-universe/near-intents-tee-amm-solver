@@ -21,7 +21,7 @@ export class NearService {
 
     const { accountId, publicKey, secretKey: privateKey } = await deriveWorkerAccount();
 
-    const keyPair = KeyPair.fromString(privateKey);
+    const keyPair = KeyPair.fromString(privateKey as `ed25519:${string}`);
     await this.keyStore.setKey(nearNetworkId, accountId, keyPair);
     this.account = await this.near.account(accountId);
     this.publicKey = publicKey;
