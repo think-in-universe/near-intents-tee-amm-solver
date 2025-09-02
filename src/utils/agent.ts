@@ -11,7 +11,7 @@ import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
 import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
 import { DstackClient, TcbInfo } from '@phala/dstack-sdk';
-
+import crypto from 'crypto';
 export interface Worker {
   pool_id: number;
   checksum: string;
@@ -105,10 +105,15 @@ export async function registerWorker(account: Account, publicKey: string) {
   // parse tcb_info
   const tcb_info = typeof tcb_info_obj !== 'string' ? JSON.stringify(tcb_info_obj) : tcb_info_obj;
 
+  // Hash the entire public key bytes with SHA3-384
   // add public key into the attestation report data
-  // get TDX quote
+  const publicKeyBytes = PublicKey.from(publicKey).data;
+  const reportData = crypto.createHash('sha3-384').update(publicKeyBytes).digest();
   console.log('registered publicKey', publicKey);
-  const ra = await client.getQuote(publicKey);
+  console.log('reportData', reportData.toString('hex'));
+
+  // get TDX quote
+  const ra = await client.getQuote(reportData);
   const quote_hex = ra.quote.replace(/^0x/, '');
 
   // get quote collateral
@@ -139,16 +144,21 @@ export async function registerWorker(account: Account, publicKey: string) {
   console.log('checksum:', checksum);
   console.log('tcb_info:', tcb_info);
 
-  // register the worker (returns bool)
-  const resContract = await account.functionCall({
-    contractId: solverRegistryContract!,
-    methodName: 'register_worker',
-    args,
-    attachedDeposit: BigInt(1),   // 1 yocto NEAR
-    gas: BigInt(200000000000000), // 200 Tgas
-  });
+  try {
+    // register the worker (returns bool)
+    const resContract = await account.functionCall({
+      contractId: solverRegistryContract!,
+      methodName: 'register_worker',
+      args,
+      attachedDeposit: BigInt(1),   // 1 yocto NEAR
+      gas: BigInt(200000000000000), // 200 Tgas
+    });
+    return { info: tcb_info, res: resContract };
+  } catch (e) {
+    console.error('Error registering worker:', e);
+  }
 
-  return { info: tcb_info, contract: resContract };
+  return { info: tcb_info };
 }
 
 export async function getWorker(account: Account): Promise<Worker | null> {
