@@ -9,9 +9,10 @@ if (process.env.NODE_ENV !== 'production') {
 import { generateSeedPhrase } from 'near-seed-phrase';
 import { PublicKey } from 'near-api-js/lib/utils';
 import { Account } from 'near-api-js';
-import { solverPoolId, solverRegistryContract } from 'src/configs/intents.config';
+import { solverPoolId, solverRegistryContract } from '../configs/intents.config.js';
 import { DstackClient, TcbInfo } from '@phala/dstack-sdk';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+
 export interface Worker {
   pool_id: number;
   checksum: string;
