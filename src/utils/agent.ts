@@ -147,14 +147,7 @@ export async function getQuote(client: DstackClient, reportData: string | Buffer
       quote_collateral: result.quote_collateral,
     }
   } catch (error) {
-    // Extract error message safely
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : typeof error === 'string' 
-        ? error 
-        : String(error);
-    
-    throw new Error(`NOT running in TEE or failed to get TEE quote or collateral: ${errorMessage}`);
+    throw new Error(`NOT running in TEE or failed to get TEE quote or collateral: ${error}`);
   }
 }
 
