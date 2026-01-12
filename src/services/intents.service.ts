@@ -15,10 +15,13 @@ export class IntentsService {
     try {
       const reserves = await this.getBalancesOnContract(tokens);
       if (reserves.length !== tokens.length) {
-        throw new Error('Invalid reserves on NEAR Intents contract');
+        throw new Error(
+          `Invalid number of reserves on NEAR Intents contract ${intentsContract}: Expected: ${tokens.length}, Received: ${reserves.length}`,
+        );
       }
     } catch (error) {
-      throw new Error(`Failed to get balances on NEAR Intents contract ${intentsContract}: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to validate reserves on NEAR Intents contract ${intentsContract}. ${errorMessage}`);
     }
   }
 
