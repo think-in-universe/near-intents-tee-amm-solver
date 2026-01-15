@@ -122,7 +122,10 @@ export async function getQuote(client: DstackClient, reportData: string | Buffer
   try {
     // get TDX quote
     const ra = await client.getQuote(reportData);
-    const quote_hex = ra.quote.replace(/^0x/, '');
+    const quote_hex = ra.quote?.replace(/^0x/, '') ?? '';
+    if (!quote_hex) {
+      throw new Error(`Invalid quote received from TEE: ${ra.quote}. Please make sure you are running inside TEE and can get a valid quote.`);
+    }
 
     // get quote collateral
     const formData = new FormData();
