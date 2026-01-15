@@ -141,7 +141,7 @@ export async function getQuote(client: DstackClient, reportData: string | Buffer
 
     // Validate response structure
     if (!result.checksum || !result.quote_collateral) {
-      throw new Error('Invalid response from quote collateral API: missing checksum or quote_collateral');
+      throw new Error(`Invalid quote collateral received: ${JSON.stringify(result)}.`);
     }
 
     return {
@@ -150,7 +150,7 @@ export async function getQuote(client: DstackClient, reportData: string | Buffer
       quote_collateral: result.quote_collateral,
     }
   } catch (error) {
-    throw new Error(`NOT running in TEE or failed to get TEE quote or collateral: ${error}`);
+    throw new Error(`Failed to get TEE quote or collateral: ${error}`);
   }
 }
 
